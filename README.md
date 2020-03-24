@@ -1,0 +1,2 @@
+# pyTicker
+Simple Stock Ticker
