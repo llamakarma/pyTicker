@@ -1,4 +1,3 @@
-# GIT test
 #!/usr/bin/env python3.6
 
 # Requires Python 3.6+
