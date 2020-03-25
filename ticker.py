@@ -3,15 +3,15 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200325-04"
+version = "20200325-06"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
 R/r - reset baselines
-U/u - increase threshold by 10% of original
-D/d - decrease threshold by 10% of original
-F/f - decrease refresh interval by 1 second
-S/s - increase refresh interval by 1 second
+U/u - increase threshold by percent given in -p (if no -t or -p, units of 100x, if -p not -t, units of 100 x p)
+D/d - decrease threshold by percent given in -p (if no -t or -p, units of 100x, if -p not -t, units of 100 x p)
+F/f - decrease refresh interval
+S/s - increase refresh interval
 
 Example usage:
 
@@ -23,6 +23,8 @@ Set an alert threshold of $750/share         ./ticker.py -s aapl -t 750
 Set an alert for £10k on 10 Tesla shares     ./ticker.py -s tsla -c gbp -m 10 -t 10000
 Make the ticker update every 5 seconds       ./ticker.py -s tsla -c gbp -m 10 -t 10000 -i 5
 Write updates to a CSV file                  ./ticker.py -s tsla -c eur -m 10 -t 10000 -o output.csv -i 5
+Threshold increments of $200 (no -t)         ./ticker.py -s aapl -p 2
+
 
 New features in recent memory:
 
@@ -44,6 +46,8 @@ defsymbol = "^gspc"
 defmulti = 1
 defthresh = 0
 defrefresh = 20
+defthreshfactor = 5
+defrefreshincrement = 5
 
 if (defthresh == 0):
     threshstatus = "disabled"
@@ -112,12 +116,15 @@ class KBHit:
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description = "pyTicker version " + version,
     epilog = helpnotes)
-parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
-parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
-parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
 parser.add_argument("-s", type=str, help="stock symbol to watch (default " + defsymbol.upper() + ")")
 parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
+parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
+parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
+parser.add_argument("-p", type=int, help="threshold ± in percent of threshold (default " + str(defthreshfactor) + ")")
+parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
+parser.add_argument("-r", type=int, help="refresh speed ± in seconds (default " + str(defrefreshincrement) + ")")
 parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
+
 
 args = parser.parse_args()
 
@@ -158,8 +165,21 @@ if (args.o == None):
     outfile = "" 
 else:
     outfile = args.o
+if (args.r == None):
+    refreshincrement = defrefreshincrement
+else:
+    refreshincrement = args.r
+if (args.p == None):
+    if threshold == 0:
+        thresholdchange = 100
+    else:
+        thresholdchange = threshold * defthreshfactor / 100
+else:
+    if threshold == 0:
+        thresholdchange = args.p * 100
+    else:
+        thresholdchange = threshold * args.p / 100
 
-thresholdchange = threshold / 10
 CSVfile = ""
 vdelta = ""
 pdelta = ""
@@ -248,10 +268,12 @@ while True:
             print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
             print()
         elif ( c == "F" ) or ( c == "f" ): # Faster iteration
-            if refresh >= 2:
-                refresh -= 1
+            if refresh - refreshincrement <= 2:
+                refresh = refreshincrement
+            else:
+                refresh = refresh - refreshincrement
         elif ( c == "S" ) or ( c == "s" ): # Slower iteration
-            refresh += 1
+            refresh = refresh + refreshincrement
         else:
             pass
 
