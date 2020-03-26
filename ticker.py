@@ -76,8 +76,8 @@ import string
 import os
 import termios
 import atexit
-import json
 
+from json import JSONDecodeError
 from select import select
 from datetime import datetime
 from pytz import timezone
