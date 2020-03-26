@@ -75,6 +75,7 @@ import string
 import os
 import termios
 import atexit
+import json
 
 from select import select
 from datetime import datetime
