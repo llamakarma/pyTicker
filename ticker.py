@@ -3,15 +3,17 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200325-06"
+version = "20200326-01"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
 R/r - reset baselines
-U/u - increase threshold by percent given in -p (if no -t or -p, units of 100x, if -p not -t, units of 100 x p)
-D/d - decrease threshold by percent given in -p (if no -t or -p, units of 100x, if -p not -t, units of 100 x p)
-F/f - decrease refresh interval
-S/s - increase refresh interval
+U/u - up = increase threshold by -p percent 
+      (if !-t, !-p, units of 100 currency, if -p, !-t, units of 100 x p)
+D/d - down = decrease threshold by -p percent 
+      (if !-t, !-p, units of 100 currency, if -p, !-t, units of 100 x p)
+F/f - faster = decrease refresh interval
+S/s - slower = increase refresh interval
 
 Example usage:
 
@@ -25,6 +27,12 @@ Make the ticker update every 5 seconds       ./ticker.py -s tsla -c gbp -m 10 -t
 Write updates to a CSV file                  ./ticker.py -s tsla -c eur -m 10 -t 10000 -o output.csv -i 5
 Threshold increments of $200 (no -t)         ./ticker.py -s aapl -p 2
 
+Alerts:
+
+Ensure you have system sounds enabled for your terminal/volume turned up!
+
+1 x bong      - new high value since init/re-init
+3 x bongs     - value is over your threshold (if configured)
 
 New features in recent memory:
 
