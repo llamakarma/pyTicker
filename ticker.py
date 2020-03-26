@@ -14,6 +14,7 @@ D/d - down = decrease threshold by -p percent
       (if !-t, !-p, units of 100 currency, if -p, !-t, units of 100 x p)
 F/f - faster = decrease refresh interval
 S/s - slower = increase refresh interval
+T/t - print threshold
 
 Example usage:
 
@@ -282,6 +283,9 @@ while True:
                 refresh = refresh - refreshincrement
         elif ( c == "S" ) or ( c == "s" ): # Slower iteration
             refresh = refresh + refreshincrement
+        elif ( c == "T" ) or ( c == "t" ):
+            print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+            print()
         else:
             pass
 
