@@ -128,9 +128,9 @@ parser.add_argument("-s", type=str, help="stock symbol to watch (default " + def
 parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
 parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
 parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
-parser.add_argument("-p", type=int, help="threshold ± in percent of threshold (default " + str(defthreshfactor) + ")")
+parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
 parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
-parser.add_argument("-r", type=int, help="refresh speed ± in seconds (default " + str(defrefreshincrement) + ")")
+parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
 parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
 
 
