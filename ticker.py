@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200327-01"
+version = "20200327-02"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -60,7 +60,7 @@ defthreshfactor = 5
 defrefreshincrement = 5
 defbell = "\a"
 defmultibell = "\a\a\a"
-
+defrndval = 4
 
 if (defthresh == 0):
     threshstatus = "disabled"
@@ -137,6 +137,7 @@ parser.add_argument("-t", type=int, help="threshold value for alerts (default di
 parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
 parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
 parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
+parser.add_argument("-d", type=int, help="number of decimal places for stock and currency prices (default " + str(defrndval) + ")")
 parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
 
 
@@ -193,6 +194,12 @@ else:
         thresholdchange = args.p * 100
     else:
         thresholdchange = threshold * args.p / 100
+if (args.d == None):
+    rndval = defrndval
+else:
+    rndval = args.d
+
+
 
 CSVfile = ""
 vdelta = ""
@@ -319,11 +326,11 @@ while True:
 # Get current prices / times - on first run set comparison variables to == first batch of data
 
     try:
-        stockprice = round(si.get_live_price(symbol), 2)
+        stockprice = round(si.get_live_price(symbol), rndval)
         if (currency == "usd"):
             currval = 1
         else:
-            currval = round(si.get_live_price(currency + "usd=x"), 4)
+            currval = round(si.get_live_price(currency + "usd=x"), rndval)
         if not outfile == "":
             if os.path.exists(outfile):
                 CSVfile = open(outfile, "a")
@@ -368,7 +375,7 @@ while True:
     now = now.strftime("%H:%M:%S")
     EST = datetime.now(timezone('America/New_York'))
     EST = EST.strftime("%H:%M:%S")
-    currequiv = round(stockprice/currval, 2)
+    currequiv = round(stockprice/currval, rndval)
     value = round(multiplier * currequiv, 2)
     if not firstrun:
         vdelta = str(round((value / bestvalue - 1) * 100,2)) + "%"
