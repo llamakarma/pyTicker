@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200326-02"
+version = "20200327-01"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -15,6 +15,7 @@ D/d - down = decrease threshold by -p percent
 F/f - faster = decrease refresh interval
 S/s - slower = increase refresh interval
 T/t - print threshold
+B/b - toggle alert bell
 
 Example usage:
 
@@ -57,6 +58,9 @@ defthresh = 0
 defrefresh = 20
 defthreshfactor = 5
 defrefreshincrement = 5
+defbell = "\a"
+defmultibell = "\a\a\a"
+
 
 if (defthresh == 0):
     threshstatus = "disabled"
@@ -196,6 +200,8 @@ pdelta = ""
 fdelta = ""
 bestprice = 0
 lowfx = 0
+bell = defbell
+multibell = defmultibell
 
 # Flags for conditional formatting
 
@@ -284,9 +290,16 @@ while True:
                 refresh = refresh - refreshincrement
         elif ( c == "S" ) or ( c == "s" ): # Slower iteration
             refresh = refresh + refreshincrement
-        elif ( c == "T" ) or ( c == "t" ):
+        elif ( c == "T" ) or ( c == "t" ): # Print current threshold
             print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
             print()
+        elif ( c == "B" ) or ( c == "b"): # Toggle bell
+            if bell != defbell:
+                bell = defbell
+                multibell = defmultibell
+            else:
+                bell = ""
+                multibell = ""
         else:
             pass
 
@@ -391,14 +404,14 @@ while True:
         print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
         print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv),col2))
 
-# Format value line - colour code & sheel beep alerts depending on case
+# Format value line - colour code & shell beep alerts depending on case
 
     if firstrun:
         print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2))
     else:
         if (threshold != 0):
             if (multiplier * currequiv > threshold): 
-                print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + '\a\a\a')
+                print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + multibell)
             elif (value > bestvalue):
                 print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
             else:
@@ -417,7 +430,7 @@ while True:
     elif (value > bestvalue):
         bestvalue = value
         peakvaluetime = now
-        print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + '\a')
+        print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + bell)
     elif (value == bestvalue):
         print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m')
     else:
