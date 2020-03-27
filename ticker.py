@@ -126,350 +126,355 @@ class KBHit:
         dr,dw,de = select([sys.stdin], [], [], 0)
         return dr != []
 
-# Get command line parameters
 
-parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description = "pyTicker version " + version,
-    epilog = helpnotes)
-parser.add_argument("-s", type=str, help="stock symbol to watch (default " + defsymbol.upper() + ")")
-parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
-parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
-parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
-parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
-parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
-parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
-parser.add_argument("-d", type=int, help="number of decimal places for stock and currency prices (default " + str(defrndval) + ")")
-parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
+def main():
+    # Get command line parameters
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description = "pyTicker version " + version,
+        epilog = helpnotes)
+    parser.add_argument("-s", type=str, help="stock symbol to watch (default " + defsymbol.upper() + ")")
+    parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
+    parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
+    parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
+    parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
+    parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
+    parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
+    parser.add_argument("-d", type=int, help="number of decimal places for stock and currency prices (default " + str(defrndval) + ")")
+    parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
 
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-# Setup basic variables based on parameters or defaults
+    # Setup basic variables based on parameters or defaults
 
-if (args.c == None):
-    currency = defcurrency
-else:
-    currency = args.c
-if currency == "gbp":
-   csymb = "£"
-elif currency == "eur":
-    csymb = "€"
-elif currency == "zar":
-    csymb = "R"
-elif currency == "usd":
-    csymb = "$"
-else:
-    csymb = "#"
-if (args.s == None):
-    symbol = defsymbol
-else:
-    symbol = args.s
-if (args.m == None):
-    multiplier = defmulti
-else:
-    multiplier = args.m
-if (args.t == None):
-    threshold = defthresh
-else:
-    threshold = args.t
-bestvalue = 0
-if (args.i == None):
-    refresh = defrefresh
-else:
-    refresh = args.i
-if (args.o == None):
-    outfile = "" 
-else:
-    outfile = args.o
-if (args.r == None):
-    refreshincrement = defrefreshincrement
-else:
-    refreshincrement = args.r
-if (args.p == None):
-    if threshold == 0:
-        thresholdchange = 100
+    if (args.c == None):
+        currency = defcurrency
     else:
-        thresholdchange = threshold * defthreshfactor / 100
-else:
-    if threshold == 0:
-        thresholdchange = args.p * 100
+        currency = args.c
+    if currency == "gbp":
+       csymb = "£"
+    elif currency == "eur":
+        csymb = "€"
+    elif currency == "zar":
+        csymb = "R"
+    elif currency == "usd":
+        csymb = "$"
     else:
-        thresholdchange = threshold * args.p / 100
-if (args.d == None):
-    rndval = defrndval
-else:
-    rndval = args.d
-
-
-
-CSVfile = ""
-vdelta = ""
-pdelta = ""
-fdelta = ""
-bestprice = 0
-lowfx = 0
-bell = defbell
-multibell = defmultibell
-
-# Flags for conditional formatting
-
-firstrun = True
-ticktock = True
-
-# Collect start of first run
-
-startdate = datetime.now()
-startdate = startdate.strftime("%d-%m-%Y")
-starttime = datetime.now()
-starttime = starttime.strftime("%H:%M:%S")
-peakvaluetime = starttime
-peakstocktime = starttime
-lowfxtime = starttime
-starttimeEST = datetime.now(timezone('America/New_York'))
-starttimeEST = starttimeEST.strftime("%H:%M:%S")
-
-# Set column widths
-
-col1 = 15
-if (len(str(threshold)) < 10):
-    col2 = 15
-else:
-    col2 = len(str(threshold)) + 5
-col3 = 14
-col4a = 10
-col4b = col4a + col3
-col5 = 14
-maxwidth = col1 + col2 + col3 + col4a + col5
-
-# Generate CSV header and delimiter line between iterations based on output width
-
-csvhdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime\n"
-csvstr = ""
-delimiter = "\r"
-for i in range(maxwidth):
-    delimiter = delimiter + "-"
-
-# Init key listener
-
-keystroke = KBHit()
-
-# Go!
-
-while True:
-
-# Check hotkeys
-
-    if keystroke.kbhit():
-        c = keystroke.getch()
-        if ( c == "Q" ) or ( c == "q" ): # Quit
-            print()
-            print("Thanks for all the fish, smeg head.")
-            print()
-            break
-        elif ( c == "R" ) or ( c == "r" ): # Reset
-            firstrun = True
-            startdate = datetime.now()
-            startdate = startdate.strftime("%d-%m-%Y")
-            starttime = datetime.now()
-            starttime = starttime.strftime("%H:%M:%S")
-            peakvaluetime = starttime
-            peakstocktime = starttime
-            lowfxtime = starttime
-            starttimeEST = datetime.now(timezone('America/New_York'))
-            starttimeEST = starttimeEST.strftime("%H:%M:%S")
-            vdelta = ""
-            pdelta = ""
-            fdelta = ""
-        elif ( c == "U" ) or ( c == "u" ): # Up threshold
-            threshold = threshold + thresholdchange
-            print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
-            print()
-        elif ( c == "D" ) or ( c == "d" ): # Down threshold
-            if (threshold - thresholdchange <= 0):
-                threshold = 0
-            else:
-                threshold = threshold - thresholdchange
-            print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
-            print()
-        elif ( c == "F" ) or ( c == "f" ): # Faster iteration
-            if refresh - refreshincrement <= 2:
-                refresh = refreshincrement
-            else:
-                refresh = refresh - refreshincrement
-        elif ( c == "S" ) or ( c == "s" ): # Slower iteration
-            refresh = refresh + refreshincrement
-        elif ( c == "T" ) or ( c == "t" ): # Print current threshold
-            print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
-            print()
-        elif ( c == "B" ) or ( c == "b"): # Toggle bell
-            if bell != defbell:
-                bell = defbell
-                multibell = defmultibell
-            else:
-                bell = ""
-                multibell = ""
+        csymb = "#"
+    if (args.s == None):
+        symbol = defsymbol
+    else:
+        symbol = args.s
+    if (args.m == None):
+        multiplier = defmulti
+    else:
+        multiplier = args.m
+    if (args.t == None):
+        threshold = defthresh
+    else:
+        threshold = args.t
+    bestvalue = 0
+    if (args.i == None):
+        refresh = defrefresh
+    else:
+        refresh = args.i
+    if (args.o == None):
+        outfile = "" 
+    else:
+        outfile = args.o
+    if (args.r == None):
+        refreshincrement = defrefreshincrement
+    else:
+        refreshincrement = args.r
+    if (args.p == None):
+        if threshold == 0:
+            thresholdchange = 100
         else:
-            pass
-
-# Print startup / re-init header
-
-    if firstrun:
-        print(str.ljust("Version:", col1) + str.ljust(version, col2) + str.ljust("Stock:", col3) + str.rjust(symbol.upper(), col4a ))
-        print(str.ljust("Multiple:", col1) + str.ljust(str(multiplier), col2) + str.ljust("Currency:", col3) + str.rjust("(" + csymb + ") " + currency.upper(), col4a))
-        if (threshold == 0):
-            print(str.ljust("Threshold not configured", col1 + col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+            thresholdchange = threshold * defthreshfactor / 100
+    else:
+        if threshold == 0:
+            thresholdchange = args.p * 100
         else:
-            print(str.ljust("Threshold:", col1) + str.ljust(csymb + str(threshold), col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+            thresholdchange = threshold * args.p / 100
+    if (args.d == None):
+        rndval = defrndval
+    else:
+        rndval = args.d
+
+
+
+    CSVfile = ""
+    vdelta = ""
+    pdelta = ""
+    fdelta = ""
+    bestprice = 0
+    lowfx = 0
+    bell = defbell
+    multibell = defmultibell
+
+    # Flags for conditional formatting
+
+    firstrun = True
+    ticktock = True
+
+    # Collect start of first run
+
+    startdate = datetime.now()
+    startdate = startdate.strftime("%d-%m-%Y")
+    starttime = datetime.now()
+    starttime = starttime.strftime("%H:%M:%S")
+    peakvaluetime = starttime
+    peakstocktime = starttime
+    lowfxtime = starttime
+    starttimeEST = datetime.now(timezone('America/New_York'))
+    starttimeEST = starttimeEST.strftime("%H:%M:%S")
+
+    # Set column widths
+
+    col1 = 15
+    if (len(str(threshold)) < 10):
+        col2 = 15
+    else:
+        col2 = len(str(threshold)) + 5
+    col3 = 14
+    col4a = 10
+    col4b = col4a + col3
+    col5 = 14
+    maxwidth = col1 + col2 + col3 + col4a + col5
+
+    # Generate CSV header and delimiter line between iterations based on output width
+
+    csvhdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime\n"
+    csvstr = ""
+    delimiter = "\r"
+    for i in range(maxwidth):
+        delimiter = delimiter + "-"
+
+    # Init key listener
+
+    keystroke = KBHit()
+
+    # Go!
+
+    while True:
+
+    # Check hotkeys
+
+        if keystroke.kbhit():
+            c = keystroke.getch()
+            if ( c == "Q" ) or ( c == "q" ): # Quit
+                print()
+                print("Thanks for all the fish, smeg head.")
+                print()
+                break
+            elif ( c == "R" ) or ( c == "r" ): # Reset
+                firstrun = True
+                startdate = datetime.now()
+                startdate = startdate.strftime("%d-%m-%Y")
+                starttime = datetime.now()
+                starttime = starttime.strftime("%H:%M:%S")
+                peakvaluetime = starttime
+                peakstocktime = starttime
+                lowfxtime = starttime
+                starttimeEST = datetime.now(timezone('America/New_York'))
+                starttimeEST = starttimeEST.strftime("%H:%M:%S")
+                vdelta = ""
+                pdelta = ""
+                fdelta = ""
+            elif ( c == "U" ) or ( c == "u" ): # Up threshold
+                threshold = threshold + thresholdchange
+                print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print()
+            elif ( c == "D" ) or ( c == "d" ): # Down threshold
+                if (threshold - thresholdchange <= 0):
+                    threshold = 0
+                else:
+                    threshold = threshold - thresholdchange
+                print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print()
+            elif ( c == "F" ) or ( c == "f" ): # Faster iteration
+                if refresh - refreshincrement <= 2:
+                    refresh = refreshincrement
+                else:
+                    refresh = refresh - refreshincrement
+            elif ( c == "S" ) or ( c == "s" ): # Slower iteration
+                refresh = refresh + refreshincrement
+            elif ( c == "T" ) or ( c == "t" ): # Print current threshold
+                print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print()
+            elif ( c == "B" ) or ( c == "b"): # Toggle bell
+                if bell != defbell:
+                    bell = defbell
+                    multibell = defmultibell
+                else:
+                    bell = ""
+                    multibell = ""
+            else:
+                pass
+
+    # Print startup / re-init header
+
+        if firstrun:
+            print(str.ljust("Version:", col1) + str.ljust(version, col2) + str.ljust("Stock:", col3) + str.rjust(symbol.upper(), col4a ))
+            print(str.ljust("Multiple:", col1) + str.ljust(str(multiplier), col2) + str.ljust("Currency:", col3) + str.rjust("(" + csymb + ") " + currency.upper(), col4a))
+            if (threshold == 0):
+                print(str.ljust("Threshold not configured", col1 + col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+            else:
+                print(str.ljust("Threshold:", col1) + str.ljust(csymb + str(threshold), col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+            print()
+            print("\33[44m" + delimiter + "\33[m")
+            print()
+
+    # Get current prices / times - on first run set comparison variables to == first batch of data
+
+        try:
+            stockprice = round(si.get_live_price(symbol), rndval)
+            if (currency == "usd"):
+                currval = 1
+            else:
+                currval = round(si.get_live_price(currency + "usd=x"), rndval)
+            if not outfile == "":
+                if os.path.exists(outfile):
+                    CSVfile = open(outfile, "a")
+                else:
+                    CSVfile = open(outfile, "w")
+        except requests.exceptions.ConnectionError as ex:
+            if firstrun:
+                print("Cannot connect to server, wifi on buddy?")
+                print()
+                quit()
+            else:
+                print("Cannot connect to server, call yourself an engineer? Using last known price")
+                print()
+        except requests.exceptions.ReadTimeout as ex:
+            if firstrun:
+                print("Timeout connecting to server, half day working?")
+                print()
+                quit()
+            else:
+                print("Timeout connecting to server, better use the last price")
+                print()
+        except AssertionError as ex:
+            if firstrun:
+                print("Call yourself a financial wizard? Try picking a real stock")
+                print()
+                quit()
+            else:
+                print("Something went horribly wrong on the far end. I blame Brexit!")
+                print()
+        except JSONDecodeError as ex:
+            if firstrun:
+                print("There's a glitch in the matrix - can't read the market API - please try again")
+                print()
+                quit()
+            else:
+                print("There's a glitch in the matrix - can't reach the market API - trying again")
+                print()
+
+    # Get time and stock prices
+
+        now = datetime.now()
+        now = now.strftime("%H:%M:%S")
+        EST = datetime.now(timezone('America/New_York'))
+        EST = EST.strftime("%H:%M:%S")
+        currequiv = round(stockprice/currval, rndval)
+        value = round(multiplier * currequiv, 2)
+        if not firstrun:
+            vdelta = str(round((value / bestvalue - 1) * 100,2)) + "%"
+            pdelta = str(round((stockprice / bestprice - 1) * 100, 2)) + "%"
+            fdelta = str(round((currval / lowfx -1) * 100, 2)) + "%"
+        else:
+            lowfx = currval
+
+    # If price/FX rate has moved then set new best rates
+
+        if stockprice > bestprice:
+            bestprice = stockprice
+            peakstocktime = now
+        if currval < lowfx:
+            lowfx = currval
+            lowfxtime = now
+
+    # Tick-tock format of start time line - just to show quickly that the script is iterating
+
+        if ticktock:
+            print("\33[44m" + str.ljust("Start:", col1) + "\33[0m" + str.ljust(starttime, col2) + str.ljust(starttimeEST + " EST", col3) + str.rjust(startdate, col4a + col5))
+            ticktock = False
+        else:
+            print(str.ljust("Start:", col1) + str.ljust(starttime, col2) + str.ljust(starttimeEST + " EST", col3) + str.rjust(startdate, col4a + col5))
+            ticktock = True
+
+    # Print basic live data
+
+        print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
         print()
-        print("\33[44m" + delimiter + "\33[m")
-        print()
+        print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
+        if (currency != "usd"):
+            print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
+            print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv),col2))
 
-# Get current prices / times - on first run set comparison variables to == first batch of data
+    # Format value line - colour code & shell beep alerts depending on case
 
-    try:
-        stockprice = round(si.get_live_price(symbol), rndval)
-        if (currency == "usd"):
-            currval = 1
+        if firstrun:
+            print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2))
         else:
-            currval = round(si.get_live_price(currency + "usd=x"), rndval)
+            if (threshold != 0):
+                if (multiplier * currequiv > threshold): 
+                    print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + multibell)
+                elif (value > bestvalue):
+                    print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
+                else:
+                    print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
+            else:
+                if (value > bestvalue):
+                    print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
+                else:
+                    print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
+
+    # Format best-since-start line - the highest price * value in local currency during run time. Alert if best increases
+
+        if firstrun:
+            bestvalue = value
+            print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
+        elif (value > bestvalue):
+            bestvalue = value
+            peakvaluetime = now
+            print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + bell)
+        elif (value == bestvalue):
+            print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m')
+        else:
+            print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
+
+
+    # For reference: csvhdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime"
+
+        csvstr = now + "," + EST + "," + startdate + "," + symbol + "," + str(stockprice) + "," + str(bestprice) + "," + peakstocktime + "," + currency + "," + str(currval) + "," + str(lowfx) + "," + lowfxtime + "," + str(value) + "," + str(bestvalue) + "," + peakvaluetime
         if not outfile == "":
-            if os.path.exists(outfile):
-                CSVfile = open(outfile, "a")
+            if firstrun:
+                csvstr = "Start," + csvstr + "\n"
+                CSVfile.write(csvhdr)
             else:
-                CSVfile = open(outfile, "w")
-    except requests.exceptions.ConnectionError as ex:
-        if firstrun:
-            print("Cannot connect to server, wifi on buddy?")
-            print()
-            quit()
-        else:
-            print("Cannot connect to server, call yourself an engineer? Using last known price")
-            print()
-    except requests.exceptions.ReadTimeout as ex:
-        if firstrun:
-            print("Timeout connecting to server, half day working?")
-            print()
-            quit()
-        else:
-            print("Timeout connecting to server, better use the last price")
-            print()
-    except AssertionError as ex:
-        if firstrun:
-            print("Call yourself a financial wizard? Try picking a real stock")
-            print()
-            quit()
-        else:
-            print("Something went horribly wrong on the far end. I blame Brexit!")
-            print()
-    except JSONDecodeError as ex:
-        if firstrun:
-            print("There's a glitch in the matrix - can't read the market API - please try again")
-            print()
-            quit()
-        else:
-            print("There's a glitch in the matrix - can't reach the market API - trying again")
-            print()
+                csvstr = "Run," + csvstr + "\n"
+            CSVfile.write(csvstr)
+            CSVfile.close()
+        firstrun = False
+        print()
 
-# Get time and stock prices
+    # Generate countdown timer
 
-    now = datetime.now()
-    now = now.strftime("%H:%M:%S")
-    EST = datetime.now(timezone('America/New_York'))
-    EST = EST.strftime("%H:%M:%S")
-    currequiv = round(stockprice/currval, rndval)
-    value = round(multiplier * currequiv, 2)
-    if not firstrun:
-        vdelta = str(round((value / bestvalue - 1) * 100,2)) + "%"
-        pdelta = str(round((stockprice / bestprice - 1) * 100, 2)) + "%"
-        fdelta = str(round((currval / lowfx -1) * 100, 2)) + "%"
-    else:
-        lowfx = currval
+        for i in range(refresh):
+            sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---",maxwidth))
+            sys.stdout.flush()
+            time.sleep(1)
+        print(delimiter)
+        print()
 
-# If price/FX rate has moved then set new best rates
+    # Normal termination activities
 
-    if stockprice > bestprice:
-        bestprice = stockprice
-        peakstocktime = now
-    if currval < lowfx:
-        lowfx = currval
-        lowfxtime = now
-
-# Tick-tock format of start time line - just to show quickly that the script is iterating
-
-    if ticktock:
-        print("\33[44m" + str.ljust("Start:", col1) + "\33[0m" + str.ljust(starttime, col2) + str.ljust(starttimeEST + " EST", col3) + str.rjust(startdate, col4a + col5))
-        ticktock = False
-    else:
-        print(str.ljust("Start:", col1) + str.ljust(starttime, col2) + str.ljust(starttimeEST + " EST", col3) + str.rjust(startdate, col4a + col5))
-        ticktock = True
-
-# Print basic live data
-
-    print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
-    print()
-    print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
-    if (currency != "usd"):
-        print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
-        print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv),col2))
-
-# Format value line - colour code & shell beep alerts depending on case
-
-    if firstrun:
-        print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2))
-    else:
-        if (threshold != 0):
-            if (multiplier * currequiv > threshold): 
-                print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + multibell)
-            elif (value > bestvalue):
-                print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
-            else:
-                print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
-        else:
-            if (value > bestvalue):
-                print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
-            else:
-                print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
-
-# Format best-since-start line - the highest price * value in local currency during run time. Alert if best increases
-
-    if firstrun:
-        bestvalue = value
-        print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
-    elif (value > bestvalue):
-        bestvalue = value
-        peakvaluetime = now
-        print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + bell)
-    elif (value == bestvalue):
-        print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m')
-    else:
-        print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
-
-
-# For reference: csvhdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime"
-
-    csvstr = now + "," + EST + "," + startdate + "," + symbol + "," + str(stockprice) + "," + str(bestprice) + "," + peakstocktime + "," + currency + "," + str(currval) + "," + str(lowfx) + "," + lowfxtime + "," + str(value) + "," + str(bestvalue) + "," + peakvaluetime
+    keystroke.set_normal_term()
     if not outfile == "":
-        if firstrun:
-            csvstr = "Start," + csvstr + "\n"
-            CSVfile.write(csvhdr)
-        else:
-            csvstr = "Run," + csvstr + "\n"
-        CSVfile.write(csvstr)
         CSVfile.close()
-    firstrun = False
-    print()
+    quit()
 
-# Generate countdown timer
-
-    for i in range(refresh):
-        sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---",maxwidth))
-        sys.stdout.flush()
-        time.sleep(1)
-    print(delimiter)
-    print()
-
-# Normal termination activities
-
-keystroke.set_normal_term()
-if not outfile == "":
-    CSVfile.close()
-quit()
+if __name__ == '__main__':
+    main()
