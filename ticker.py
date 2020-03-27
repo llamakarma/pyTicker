@@ -17,6 +17,9 @@ S/s - slower = increase refresh interval
 T/t - print threshold
 B/b - toggle alert bell
 
+Note: Only one keypress per iteration is actioned. Multiple keypresses will be queued
+and implemented on subsequent iterations.
+
 Example usage:
 
 Track Apple stock natively in $USD           ./ticker.py -s aapl
