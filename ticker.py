@@ -21,7 +21,7 @@ Example usage:
 
 Track Apple stock natively in $USD           ./ticker.py -s aapl
 Track Apple stock in £GBP                    ./ticker.py -s aapl -c gbp
-Track the GBP-USD exchange rate              ./ticker.py -s gbpusd=x
+Track the GBP-USD exchange rate              ./ticker.py -s gbpusd=x -c gbp
 Track the value of 85 Apple shares in €EUR   ./ticker.py -s aapl -c eur -m 85
 Set an alert threshold of $750/share         ./ticker.py -s aapl -t 750
 Set an alert for £10k on 10 Tesla shares     ./ticker.py -s tsla -c gbp -m 10 -t 10000
