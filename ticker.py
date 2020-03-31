@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-01"
+version = "20200331-03"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -50,6 +50,7 @@ New features in recent memory:
 - Added hotkeys
 - Added write out to CSV
 - Added parameter to disable price / value / best
+  (also enables bell alerts on stock price)
 
 To do list:
 
@@ -218,6 +219,7 @@ def main():
     pdelta = ""
     fdelta = ""
     bestprice = 0
+    lastbestprice = 0
     lowfx = 0
     bell = defbell
     multibell = defmultibell
@@ -325,6 +327,7 @@ def main():
     # Print startup / re-init header
 
         if firstrun:
+            print()
             print(str.ljust("Version:", col1) + str.ljust(version, col2) + str.ljust("Stock:", col3) + str.rjust(symbol.upper(), col4a ))
             print(str.ljust("Multiple:", col1) + str.ljust(str(multiplier), col2) + str.ljust("Currency:", col3) + str.rjust("(" + csymb + ") " + currency.upper(), col4a))
             if (threshold == 0):
@@ -339,6 +342,8 @@ def main():
 
         try:
             stockprice = round(si.get_live_price(symbol), rndval)
+            if firstrun:
+                lastbestprice = bestprice = stockprice
             if (currency == "usd"):
                 currval = 1
             else:
@@ -388,7 +393,7 @@ def main():
         EST = datetime.now(timezone('America/New_York'))
         EST = EST.strftime("%H:%M:%S")
         currequiv = round(stockprice/currval, rndval)
-        value = round(multiplier * currequiv, 2)
+        value = bestvalue = round(multiplier * currequiv, 2)
         if not firstrun:
             vdelta = str(round((value / bestvalue - 1) * 100,2)) + "%"
             pdelta = str(round((stockprice / bestprice - 1) * 100, 2)) + "%"
@@ -399,6 +404,7 @@ def main():
     # If price/FX rate has moved then set new best rates
 
         if stockprice > bestprice:
+            lastbestprice = bestprice
             bestprice = stockprice
             peakstocktime = now
         if currval < lowfx:
@@ -418,7 +424,10 @@ def main():
 
         print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
         print()
-        print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
+        if not args.b and bestprice > lastbestprice:
+            print('\33[7m' + str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5) + '\33[0m' + bell)
+        else:
+            print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
         if currency != "usd":
             print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
         if currency != "usd" and args.b:
