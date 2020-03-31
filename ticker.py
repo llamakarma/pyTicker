@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200327-02"
+version = "20200331-01"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -49,6 +49,13 @@ New features in recent memory:
 - Added time of peak stock/lowest FX values/best value
 - Added hotkeys
 - Added write out to CSV
+- Added parameter to disable price / value / best
+
+To do list:
+
+- Improve argsparse usage with defaults / cut down if-else for argument handling
+- Pylint -> proper code cleanup
+
 \n\n
 """
 
@@ -144,7 +151,7 @@ def main():
     parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
     parser.add_argument("-d", type=int, help="number of decimal places for stock and currency prices (default " + str(defrndval) + ")")
     parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
-
+    parser.add_argument("-b", action='store_false', default=True, help="brief output - disable Price, Value, Best") 
 
     args = parser.parse_args()
 
@@ -412,41 +419,43 @@ def main():
         print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
         print()
         print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
-        if (currency != "usd"):
+        if currency != "usd":
             print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
+        if currency != "usd" and args.b:
             print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv),col2))
 
     # Format value line - colour code & shell beep alerts depending on case
 
-        if firstrun:
-            print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2))
-        else:
-            if (threshold != 0):
-                if (multiplier * currequiv > threshold): 
-                    print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + multibell)
-                elif (value > bestvalue):
-                    print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
-                else:
-                    print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
+        if args.b:
+            if firstrun:
+                print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2))
             else:
-                if (value > bestvalue):
-                    print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
+                if (threshold != 0):
+                    if (multiplier * currequiv > threshold): 
+                        print('\33[42m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m' + multibell)
+                    elif (value > bestvalue):
+                        print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
+                    else:
+                        print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
                 else:
-                    print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
+                    if (value > bestvalue):
+                        print('\33[7m' + str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b) + '\33[0m')
+                    else:
+                        print(str.ljust("VALUE:", col1) + str.ljust(csymb + str(value), col2) + str.rjust(vdelta, col4b))
 
     # Format best-since-start line - the highest price * value in local currency during run time. Alert if best increases
 
-        if firstrun:
-            bestvalue = value
-            print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
-        elif (value > bestvalue):
-            bestvalue = value
-            peakvaluetime = now
-            print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + bell)
-        elif (value == bestvalue):
-            print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m')
-        else:
-            print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
+            if firstrun:
+                bestvalue = value
+                print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
+            elif (value > bestvalue):
+                bestvalue = value
+                peakvaluetime = now
+                print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m' + bell)
+            elif (value == bestvalue):
+                print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(csymb + str(value), col2) + str.rjust("@ " + peakvaluetime, col4b + col5) + '\33[0m')
+            else:
+                print(str.ljust("BEST:", col1) + str.ljust(csymb + str(bestvalue), col2) + str.rjust("@ " + peakvaluetime, col4b + col5))
 
 
     # For reference: csvhdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime"
