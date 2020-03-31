@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-05"
+version = "20200331-06"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -50,7 +50,8 @@ New features in recent memory:
 - Added hotkeys
 - Added write out to CSV
 - Added parameter to disable price / value / best
-  (also enables bell alerts on stock price)
+  (also enables bell alerts on stock price instead of value)
+- Added bell toggle notification and bell status to countdown
 
 To do list:
 
@@ -295,14 +296,14 @@ def main():
                 fdelta = ""
             elif ( c == "U" ) or ( c == "u" ): # Up threshold
                 threshold = threshold + thresholdchange
-                print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "D" ) or ( c == "d" ): # Down threshold
                 if (threshold - thresholdchange <= 0):
                     threshold = 0
                 else:
                     threshold = threshold - thresholdchange
-                print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "F" ) or ( c == "f" ): # Faster iteration
                 if refresh - refreshincrement <= 2:
@@ -312,15 +313,19 @@ def main():
             elif ( c == "S" ) or ( c == "s" ): # Slower iteration
                 refresh = refresh + refreshincrement
             elif ( c == "T" ) or ( c == "t" ): # Print current threshold
-                print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---",maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "B" ) or ( c == "b"): # Toggle bell
                 if bell != defbell:
                     bell = defbell
                     multibell = defmultibell
+                    print("\33[44m" + str.center("--- Alerts enabled ---", maxwidth) + "\33[0m")
+                    print()
                 else:
                     bell = ""
                     multibell = ""
+                    print("\33[44m" + str.center("--- Alerts disabled ---", maxwidth) + "\33[0m")
+                    print()
             else:
                 pass
 
@@ -485,9 +490,14 @@ def main():
     # Generate countdown timer
 
         for i in range(refresh):
-            sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---", maxwidth))
-            sys.stdout.flush()
-            time.sleep(1)
+            if bell == "":
+                sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---", maxwidth))
+                sys.stdout.flush()
+                time.sleep(1)
+            else:
+                sys.stdout.write("\r" + str.center("-" + u'\U0001f514' + "- Refreshes in " + str(refresh - i) + " seconds -" + u'\U0001f514' + "-", maxwidth))
+                sys.stdout.flush()
+                time.sleep(1)
         print(delimiter)
         print()
 
