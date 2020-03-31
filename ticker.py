@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-04"
+version = "20200331-05"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -393,14 +393,14 @@ def main():
         EST = datetime.now(timezone('America/New_York'))
         EST = EST.strftime("%H:%M:%S")
         currequiv = round(stockprice/currval, rndval)
-        value = bestvalue = round(multiplier * currequiv, 2)
         if not firstrun:
+            value = round(multiplier * currequiv, 2)
             vdelta = str(round((value / bestvalue - 1) * 100, 2)) + "%"
             pdelta = str(round((stockprice / bestprice - 1) * 100, 2)) + "%"
             fdelta = str(round((currval / lowfx -1) * 100, 2)) + "%"
         else:
             lowfx = currval
-
+            value = bestvalue = round(multiplier * currequiv, 2)
     # If price/FX rate has moved then set new best rates
 
         if stockprice > bestprice:
