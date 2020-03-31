@@ -8,9 +8,9 @@ helpnotes= """Hot-keys during use:
 
 Q/q - quit
 R/r - reset baselines
-U/u - up = increase threshold by -p percent 
+U/u - up = increase threshold by -p %
       (if !-t, !-p, units of 100 currency, if -p, !-t, units of 100 x p)
-D/d - down = decrease threshold by -p percent 
+D/d - down = decrease threshold by -p %
       (if !-t, !-p, units of 100 currency, if -p, !-t, units of 100 x p)
 F/f - faster = decrease refresh interval
 S/s - slower = increase refresh interval
@@ -152,8 +152,8 @@ def main():
     parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
     parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
     parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
-    parser.add_argument("-tv", action='store_true', default=False, help="threshold based on opening Price x Multiplier")
-    parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
+    parser.add_argument("-tv", action='store_true', default=False, help="threshold = opening Price x Multiplier (if !-p, 1%%)")
+    parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in %% of threshold (default " + str(defthreshfactor) + ")")
     parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
     parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
     parser.add_argument("-d", type=int, help="number of decimal places for stock and currency prices (default " + str(defrndval) + ")")
@@ -419,7 +419,10 @@ def main():
             value = bestvalue = round(multiplier * currequiv, 2)
             if args.tv:
                 threshold = value
-                thresholdchange = threshold * args.p / 100
+                if args.p == None:
+                    thresholdchange = value / 100
+                else:
+                    thresholdchange = threshold * args.p / 100
 
 
     # If price/FX rate has moved then set new best rates
