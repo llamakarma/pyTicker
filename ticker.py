@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-03"
+version = "20200331-04"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -134,7 +134,7 @@ class KBHit:
         return sys.stdin.read(1)
 
     def kbhit(self):
-        dr,dw,de = select([sys.stdin], [], [], 0)
+        dr, dw, de = select([sys.stdin], [], [], 0)
         return dr != []
 
 
@@ -158,7 +158,7 @@ def main():
 
     # Setup basic variables based on parameters or defaults
 
-    if (args.c == None):
+    if args.c == None:
         currency = defcurrency
     else:
         currency = args.c
@@ -172,32 +172,32 @@ def main():
         csymb = "$"
     else:
         csymb = "#"
-    if (args.s == None):
+    if args.s == None:
         symbol = defsymbol
     else:
         symbol = args.s
-    if (args.m == None):
+    if args.m == None:
         multiplier = defmulti
     else:
         multiplier = args.m
-    if (args.t == None):
+    if args.t == None:
         threshold = defthresh
     else:
         threshold = args.t
     bestvalue = 0
-    if (args.i == None):
+    if args.i == None:
         refresh = defrefresh
     else:
         refresh = args.i
-    if (args.o == None):
+    if args.o == None:
         outfile = "" 
     else:
         outfile = args.o
-    if (args.r == None):
+    if args.r == None:
         refreshincrement = defrefreshincrement
     else:
         refreshincrement = args.r
-    if (args.p == None):
+    if args.p == None:
         if threshold == 0:
             thresholdchange = 100
         else:
@@ -207,7 +207,7 @@ def main():
             thresholdchange = args.p * 100
         else:
             thresholdchange = threshold * args.p / 100
-    if (args.d == None):
+    if args.d == None:
         rndval = defrndval
     else:
         rndval = args.d
@@ -395,7 +395,7 @@ def main():
         currequiv = round(stockprice/currval, rndval)
         value = bestvalue = round(multiplier * currequiv, 2)
         if not firstrun:
-            vdelta = str(round((value / bestvalue - 1) * 100,2)) + "%"
+            vdelta = str(round((value / bestvalue - 1) * 100, 2)) + "%"
             pdelta = str(round((stockprice / bestprice - 1) * 100, 2)) + "%"
             fdelta = str(round((currval / lowfx -1) * 100, 2)) + "%"
         else:
@@ -423,15 +423,16 @@ def main():
     # Print basic live data
 
         print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
-        print()
+
         if not args.b and bestprice > lastbestprice:
-            print('\33[7m' + str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5) + '\33[0m' + bell)
+            print('\33[7m' + str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta, col4a) + str.rjust("@ " + peakstocktime, col5) + '\33[0m' + bell)
+            lastbestprice = bestprice
         else:
-            print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta,col4a) + str.rjust("@ " + peakstocktime, col5))
+            print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta, col4a) + str.rjust("@ " + peakstocktime, col5))
         if currency != "usd":
-            print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta,col4a) + str.rjust("@ " + lowfxtime, col5))
+            print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(currval), col2) + str.ljust("L: " + str(lowfx), col3) + str.rjust(fdelta, col4a) + str.rjust("@ " + lowfxtime, col5))
         if currency != "usd" and args.b:
-            print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv),col2))
+            print(str.ljust("PRICE:", col1) + str.ljust(csymb + str(currequiv), col2))
 
     # Format value line - colour code & shell beep alerts depending on case
 
@@ -484,7 +485,7 @@ def main():
     # Generate countdown timer
 
         for i in range(refresh):
-            sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---",maxwidth))
+            sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) + " seconds ---", maxwidth))
             sys.stdout.flush()
             time.sleep(1)
         print(delimiter)
