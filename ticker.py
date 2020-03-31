@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-06"
+version = "20200331-08"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
@@ -31,6 +31,8 @@ Set an alert for £10k on 10 Tesla shares     ./ticker.py -s tsla -c gbp -m 10 -
 Make the ticker update every 5 seconds       ./ticker.py -s tsla -c gbp -m 10 -t 10000 -i 5
 Write updates to a CSV file                  ./ticker.py -s tsla -c eur -m 10 -t 10000 -o output.csv -i 5
 Threshold increments of $200 (no -t)         ./ticker.py -s aapl -p 2
+Threshold set at start, increments of 5%     ./ticker.py -s aapl -tv -p 5
+
 
 Alerts:
 
@@ -52,6 +54,8 @@ New features in recent memory:
 - Added parameter to disable price / value / best
   (also enables bell alerts on stock price instead of value)
 - Added bell toggle notification and bell status to countdown
+- Added auto-threshold based on opening value
+
 
 To do list:
 
@@ -148,6 +152,7 @@ def main():
     parser.add_argument("-c", choices=["eur", "gbp", "usd", "zar"], type=str, help="select threshold/value currency (default " + defcurrency.upper() + ")")
     parser.add_argument("-m", type=int, help="multiplier (Price x Multiplier = Value) (default " + str(defmulti) + ")")
     parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
+    parser.add_argument("-tv", action='store_true', default=False, help="threshold based on opening Price x Multiplier")
     parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in percent of threshold (default " + str(defthreshfactor) + ")")
     parser.add_argument("-i", type=int, help="refresh interval in seconds (default " + str(defrefresh) + ")")
     parser.add_argument("-r", type=int, help="refresh hotkey (f/s) ± in seconds (default " + str(defrefreshincrement) + ")")
@@ -199,7 +204,7 @@ def main():
     else:
         refreshincrement = args.r
     if args.p == None:
-        if threshold == 0:
+        if threshold == 0 and not args.tv:
             thresholdchange = 100
         else:
             thresholdchange = threshold * defthreshfactor / 100
@@ -213,7 +218,10 @@ def main():
     else:
         rndval = args.d
 
+# Precedence in case user requests both -t and -tv arguments
 
+    if args.t != None and args.tv:
+        args.tv = False
 
     CSVfile = ""
     vdelta = ""
@@ -296,14 +304,14 @@ def main():
                 fdelta = ""
             elif ( c == "U" ) or ( c == "u" ): # Up threshold
                 threshold = threshold + thresholdchange
-                print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Increase threshold to " + csymb + str(round(threshold, 2)) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "D" ) or ( c == "d" ): # Down threshold
                 if (threshold - thresholdchange <= 0):
                     threshold = 0
                 else:
                     threshold = threshold - thresholdchange
-                print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Reduce threshold to " + csymb + str(round(threshold, 2)) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "F" ) or ( c == "f" ): # Faster iteration
                 if refresh - refreshincrement <= 2:
@@ -313,7 +321,7 @@ def main():
             elif ( c == "S" ) or ( c == "s" ): # Slower iteration
                 refresh = refresh + refreshincrement
             elif ( c == "T" ) or ( c == "t" ): # Print current threshold
-                print("\33[44m" + str.center("--- Current threshold is " + csymb + str(threshold) + " ---", maxwidth) + "\33[0m")
+                print("\33[44m" + str.center("--- Current threshold is " + csymb + str(round(threshold, 2)) + " ---", maxwidth) + "\33[0m")
                 print()
             elif ( c == "B" ) or ( c == "b"): # Toggle bell
                 if bell != defbell:
@@ -335,7 +343,10 @@ def main():
             print()
             print(str.ljust("Version:", col1) + str.ljust(version, col2) + str.ljust("Stock:", col3) + str.rjust(symbol.upper(), col4a ))
             print(str.ljust("Multiple:", col1) + str.ljust(str(multiplier), col2) + str.ljust("Currency:", col3) + str.rjust("(" + csymb + ") " + currency.upper(), col4a))
-            if (threshold == 0):
+
+            if args.tv:
+                print(str.ljust("Threshold at open value", col1 + col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+            elif (threshold == 0):
                 print(str.ljust("Threshold not configured", col1 + col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
             else:
                 print(str.ljust("Threshold:", col1) + str.ljust(csymb + str(threshold), col2) + str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
@@ -406,6 +417,11 @@ def main():
         else:
             lowfx = currval
             value = bestvalue = round(multiplier * currequiv, 2)
+            if args.tv:
+                threshold = value
+                thresholdchange = threshold * args.p / 100
+
+
     # If price/FX rate has moved then set new best rates
 
         if stockprice > bestprice:
@@ -428,6 +444,7 @@ def main():
     # Print basic live data
 
         print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(EST + " EST", col3))
+        print()
 
         if not args.b and bestprice > lastbestprice:
             print('\33[7m' + str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stockprice), col2) + str.ljust("H: " + str(bestprice), col3) + str.rjust(pdelta, col4a) + str.rjust("@ " + peakstocktime, col5) + '\33[0m' + bell)
