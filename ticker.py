@@ -28,7 +28,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200401-02"
+VERSION = "20200401-03"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
