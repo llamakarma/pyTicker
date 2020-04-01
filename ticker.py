@@ -84,8 +84,7 @@ New features in recent memory:
 
 To do list:
 
-- Improve argsparse usage with defaults / cut down if-else for argument handling
-- Pylint -> proper code cleanup
+- Refactor
 
 \n\n
 """
