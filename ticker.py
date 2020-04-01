@@ -103,11 +103,6 @@ DEF_BELL = "\a"
 DEF_MULTI_BELL = "\a\a\a"
 DEF_RND_VAL = 4
 
-if DEF_THRESH == 0:
-    THRESH_STATUS = "disabled"
-else:
-    THRESH_STATUS = DEF_THRESH
-
 # Handle puke
 def signal_handler(sig, frame):
     print()
