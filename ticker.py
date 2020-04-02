@@ -219,7 +219,7 @@ def parse_cmdline():
 
 
 def main():
-    """ Main loop"""
+    """ Main """
     # Get command line parameters
 
     args = parse_cmdline()
