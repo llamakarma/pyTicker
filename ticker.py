@@ -188,10 +188,7 @@ def set_column_width(threshold):
     col[4] = 14
     return col
 
-
-def main():
-    """ Main loop"""
-    # Get command line parameters
+def parse_cmdline():
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description="pyTicker version " + VERSION,
@@ -206,7 +203,7 @@ def main():
     parser.add_argument("-t", type=int, help="threshold value for alerts (default disabled)")
     parser.add_argument("-tv", action='store_true', default=False,
                         help="threshold = opening Price x Multiplier "
-                             "(if !-p, 1%% hotkey adjustments)")
+                        "(if !-p, 1%% hotkey adjustments)")
     parser.add_argument("-p", type=int, help="threshold hotkey (u/d) ± in %% of threshold (default "
                         + str(DEF_THRESH_FACTOR) + ")")
     parser.add_argument("-i", type=int, help="refresh interval in seconds (default " +
@@ -218,8 +215,15 @@ def main():
     parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
     parser.add_argument("-b", action='store_false', default=True, help="brief output - disable "
                         "Price, Value, Best")
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def main():
+    """ Main loop"""
+    # Get command line parameters
+
+    args = parse_cmdline()
+
     # Setup basic variables based on parameters or defaults
 
     if args.c is None:
