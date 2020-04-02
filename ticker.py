@@ -12,7 +12,7 @@ import signal
 import sys
 import time
 import argparse
-#import string
+# import string
 import os
 import termios
 import atexit
@@ -28,7 +28,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200401-03"
+VERSION = "20200402-02"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
@@ -101,6 +101,8 @@ DEF_REFRESH_INC = 5
 DEF_BELL = "\a"
 DEF_MULTI_BELL = "\a\a\a"
 DEF_RND_VAL = 4
+CSV_HDR = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime," \
+          "Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime\n"
 
 # Handle puke
 def signal_handler(sig, frame):
@@ -110,10 +112,11 @@ def signal_handler(sig, frame):
     print()
     sys.exit(1)
 
+
 signal.signal(signal.SIGINT, signal_handler)
 
-# Keystroke listener
 
+# Keystroke listener
 class KBHit:
 
     def __init__(self):
@@ -121,13 +124,12 @@ class KBHit:
         self.new_term = termios.tcgetattr(self.f_d)
         self.old_term = termios.tcgetattr(self.f_d)
 
-# New terminal setting unbuffered
 
+# New terminal setting unbuffered
         self.new_term[3] = (self.new_term[3] & ~termios.ICANON & ~termios.ECHO)
         termios.tcsetattr(self.f_d, termios.TCSAFLUSH, self.new_term)
 
 # Support normal-terminal reset at exit
-
         atexit.register(self.set_normal_term)
 
     def set_normal_term(self):
@@ -139,6 +141,38 @@ class KBHit:
     def kbhit(self):
         d_r, d_w, d_e = select([sys.stdin], [], [], 0)
         return d_r != []
+
+
+def write_csv_file(first_run, csv_str, csv_file):
+    if first_run:
+        csv_file.write(CSV_HDR)
+        csv_str = "Start," + csv_str + "\n"
+    else:
+        csv_str = "Run," + csv_str + "\n"
+    csv_file.write(csv_str)
+    csv_file.close()
+
+
+def make_delimiter(max_width):
+    delimiter = "\r"
+    for i in range(max_width):
+        delimiter = delimiter + "-"
+    return delimiter
+
+
+def print_countdown(bell, refresh, max_width):
+    for i in range(refresh):
+        if bell == "":
+            sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) +
+                                               " seconds ---", max_width))
+            sys.stdout.flush()
+            time.sleep(1)
+        else:
+            sys.stdout.write("\r" + str.center("-" + u'\U0001f514' + "- Refreshes in " +
+                                               str(refresh - i) + " seconds -" + u'\U0001f514' +
+                                               "-", max_width))
+            sys.stdout.flush()
+            time.sleep(1)
 
 
 def main():
@@ -248,6 +282,8 @@ def main():
 
     first_run = True
     tick_tock = True
+    quit_flag = False
+
 
     # Collect start of first run
 
@@ -276,12 +312,7 @@ def main():
 
     # Generate CSV header and delimiter line between iterations based on output width
 
-    csv_hdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime," \
-              "Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime\n"
-    csv_str = ""
-    delimiter = "\r"
-    for i in range(max_width):
-        delimiter = delimiter + "-"
+    delimiter = make_delimiter(max_width)
 
     # Init key listener
 
@@ -289,71 +320,7 @@ def main():
 
     # Go!
 
-    while True:
-
-    # Check hotkeys
-
-        if keystroke.kbhit():
-            key = keystroke.getch()
-            if key in ["Q", "q"]: # Quit
-                print()
-                print("Thanks for all the fish, smeg head.")
-                print()
-                sys.exit(0)
-            elif key in ["R", "r"]: # Reset
-                first_run = True
-                start_date = datetime.now()
-                start_date = start_date.strftime("%d-%m-%Y")
-                start_time = datetime.now()
-                start_time = start_time.strftime("%H:%M:%S")
-                peak_val_time = start_time
-                peak_stk_time = start_time
-                low_fx_time = start_time
-                start_time_est = datetime.now(timezone('America/New_York'))
-                start_time_est = start_time_est.strftime("%H:%M:%S")
-                val_delta = ""
-                price_delta = ""
-                fx_delta = ""
-            elif key in ["U", "u"]: # Up threshold
-                threshold = threshold + thresh_change
-                print("\33[44m" + str.center("--- Increase threshold to " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
-                      "\33[0m")
-                print()
-            elif key in ["D", "d"]: # Down threshold
-                if threshold - thresh_change <= 0:
-                    threshold = 0
-                else:
-                    threshold = threshold - thresh_change
-                print("\33[44m" + str.center("--- Reduce threshold to " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
-                      "\33[0m")
-                print()
-            elif key in ["F", "f"]: # Faster iteration
-                if refresh - refresh_inc <= 2:
-                    refresh = refresh_inc
-                else:
-                    refresh = refresh - refresh_inc
-            elif key in ["S", "s"]: # Slower iteration
-                refresh = refresh + refresh_inc
-            elif key in ["T", "t"]: # Print current threshold
-                print("\33[44m" + str.center("--- Current threshold is " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
-                      "\33[0m")
-                print()
-            elif key in ["B", "b"]: # Toggle bell
-                if bell != DEF_BELL:
-                    bell = DEF_BELL
-                    multi_bell = DEF_MULTI_BELL
-                    print("\33[44m" + str.center("--- Alerts enabled ---", max_width) + "\33[0m")
-                    print()
-                else:
-                    bell = ""
-                    multi_bell = ""
-                    print("\33[44m" + str.center("--- Alerts disabled ---", max_width) + "\33[0m")
-                    print()
-            else:
-                pass
+    while not quit_flag:
 
     # Print startup / re-init header
 
@@ -438,7 +405,7 @@ def main():
             value = round(multiplier * curr_equiv, 2)
             val_delta = str(round((value / best_value - 1) * 100, 2)) + "%"
             price_delta = str(round((stock_price / best_price - 1) * 100, 2)) + "%"
-            fx_delta = str(round((curr_val / low_fx -1) * 100, 2)) + "%"
+            fx_delta = str(round((curr_val / low_fx - 1) * 100, 2)) + "%"
         else:
             low_fx = curr_val
             value = best_value = round(multiplier * curr_equiv, 2)
@@ -448,7 +415,6 @@ def main():
                     thresh_change = value / 100
                 else:
                     thresh_change = threshold * args.p / 100
-
 
     # If price/FX rate has moved then set new best rates
 
@@ -539,42 +505,89 @@ def main():
                 print(str.ljust("BEST:", col1) + str.ljust(c_symb + str(best_value), col2) +
                       str.rjust("@ " + peak_val_time, col4b + col5))
 
-
-    # For reference: csv_hdr = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,
+    # For reference: CSV_HDR = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,
     # SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,
     # BestValueTime"
 
-        csv_str = now + "," + est_time + "," + start_date + "," + symbol + "," + str(stock_price) \
-                  + "," + str(best_price) + "," + peak_stk_time + "," + currency + "," + \
-                  str(curr_val) + "," + str(low_fx) + "," + low_fx_time + "," + str(value) + "," \
-                  + str(best_value) + "," + peak_val_time
         if out_file != "":
-            if first_run:
-                csv_str = "Start," + csv_str + "\n"
-                csv_file.write(csv_hdr)
-            else:
-                csv_str = "Run," + csv_str + "\n"
-            csv_file.write(csv_str)
-            csv_file.close()
-        first_run = False
-        print()
+            csv_str = now + "," + est_time + "," + start_date + "," + symbol + "," \
+                      + str(stock_price) + "," + str(best_price) + "," + peak_stk_time + "," \
+                      + currency + "," + str(curr_val) + "," + str(low_fx) + "," + low_fx_time \
+                      + "," + str(value) + "," + str(best_value) + "," + peak_val_time
+            write_csv_file(first_run, csv_str, csv_file)
 
     # Generate countdown timer
 
-        for i in range(refresh):
-            if bell == "":
-                sys.stdout.write("\r" + str.center("--- Refreshes in " + str(refresh - i) +
-                                                   " seconds ---", max_width))
-                sys.stdout.flush()
-                time.sleep(1)
-            else:
-                sys.stdout.write("\r" + str.center("-" + u'\U0001f514' + "- Refreshes in " +
-                                                   str(refresh - i) + " seconds -" + u'\U0001f514' +
-                                                   "-", max_width))
-                sys.stdout.flush()
-                time.sleep(1)
+        print()
+        print_countdown(bell, refresh, max_width)
         print(delimiter)
         print()
+
+        # Check hotkeys
+
+        if keystroke.kbhit():
+            key = keystroke.getch()
+            if key in ["Q", "q"]:  # Quit
+                print()
+                print("Thanks for all the fish, smeg head.")
+                print()
+                quit_flag = True
+            elif key in ["R", "r"]:  # Reset
+                first_run = True
+                start_date = datetime.now()
+                start_date = start_date.strftime("%d-%m-%Y")
+                start_time = datetime.now()
+                start_time = start_time.strftime("%H:%M:%S")
+                peak_val_time = start_time
+                peak_stk_time = start_time
+                low_fx_time = start_time
+                start_time_est = datetime.now(timezone('America/New_York'))
+                start_time_est = start_time_est.strftime("%H:%M:%S")
+                val_delta = ""
+                price_delta = ""
+                fx_delta = ""
+            elif key in ["U", "u"]:  # Up threshold
+                threshold = threshold + thresh_change
+                print("\33[44m" + str.center("--- Increase threshold to " + c_symb +
+                                             str(round(threshold, 2)) + " ---", max_width) +
+                      "\33[0m")
+                print()
+            elif key in ["D", "d"]:  # Down threshold
+                if threshold - thresh_change <= 0:
+                    threshold = 0
+                else:
+                    threshold = threshold - thresh_change
+                print("\33[44m" + str.center("--- Reduce threshold to " + c_symb +
+                                             str(round(threshold, 2)) + " ---", max_width) +
+                      "\33[0m")
+                print()
+            elif key in ["F", "f"]:  # Faster iteration
+                if refresh - refresh_inc <= 2:
+                    refresh = refresh_inc
+                else:
+                    refresh = refresh - refresh_inc
+            elif key in ["S", "s"]:  # Slower iteration
+                refresh = refresh + refresh_inc
+            elif key in ["T", "t"]:  # Print current threshold
+                print("\33[44m" + str.center("--- Current threshold is " + c_symb +
+                                             str(round(threshold, 2)) + " ---", max_width) +
+                      "\33[0m")
+                print()
+            elif key in ["B", "b"]:  # Toggle bell
+                if bell != DEF_BELL:
+                    bell = DEF_BELL
+                    multi_bell = DEF_MULTI_BELL
+                    print("\33[44m" + str.center("--- Alerts enabled ---", max_width) + "\33[0m")
+                    print()
+                else:
+                    bell = ""
+                    multi_bell = ""
+                    print("\33[44m" + str.center("--- Alerts disabled ---", max_width) + "\33[0m")
+                    print()
+            else:
+                pass
+
+        first_run = False
 
     # Normal termination activities
 
@@ -582,6 +595,7 @@ def main():
     if out_file != "":
         csv_file.close()
     sys.exit(0)
+
 
 if __name__ == '__main__':
     main()
