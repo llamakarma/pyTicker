@@ -12,7 +12,6 @@ import signal
 import sys
 import time
 import argparse
-# import string
 import os
 import termios
 import atexit
@@ -28,7 +27,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200402-02"
+VERSION = "20200402-03"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
@@ -104,7 +103,9 @@ DEF_RND_VAL = 4
 CSV_HDR = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,SymbolHighTime," \
           "Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,BestValueTime\n"
 
+
 # Handle puke
+# noinspection PyUnusedLocal
 def signal_handler(sig, frame):
     print()
     print()
@@ -175,6 +176,19 @@ def print_countdown(bell, refresh, max_width):
             time.sleep(1)
 
 
+def set_column_width(threshold):
+    col = [0] * 5
+    col[0] = 15
+    if len(str(threshold)) < 10:
+        col[1] = 15
+    else:
+        col[1] = len(str(threshold)) + 5
+    col[2] = 14
+    col[3] = 10
+    col[4] = 14
+    return col
+
+
 def main():
     """ Main loop"""
     # Get command line parameters
@@ -206,7 +220,6 @@ def main():
                         "Price, Value, Best")
 
     args = parser.parse_args()
-
     # Setup basic variables based on parameters or defaults
 
     if args.c is None:
@@ -284,7 +297,6 @@ def main():
     tick_tock = True
     quit_flag = False
 
-
     # Collect start of first run
 
     start_date = datetime.now()
@@ -297,23 +309,6 @@ def main():
     start_time_est = datetime.now(timezone('America/New_York'))
     start_time_est = start_time_est.strftime("%H:%M:%S")
 
-    # Set column widths
-
-    col1 = 15
-    if len(str(threshold)) < 10:
-        col2 = 15
-    else:
-        col2 = len(str(threshold)) + 5
-    col3 = 14
-    col4a = 10
-    col4b = col4a + col3
-    col5 = 14
-    max_width = col1 + col2 + col3 + col4a + col5
-
-    # Generate CSV header and delimiter line between iterations based on output width
-
-    delimiter = make_delimiter(max_width)
-
     # Init key listener
 
     keystroke = KBHit()
@@ -322,25 +317,30 @@ def main():
 
     while not quit_flag:
 
+        #  Figure out column widths based on threshold and generate delimiter bar
+
+        col = set_column_width(threshold)
+        delimiter = make_delimiter(sum(col))
+
     # Print startup / re-init header
 
         if first_run:
             print()
-            print(str.ljust("Version:", col1) + str.ljust(VERSION, col2) + str.ljust("Stock:", col3)
-                  + str.rjust(symbol.upper(), col4a))
-            print(str.ljust("Multiple:", col1) + str.ljust(str(multiplier), col2) +
-                  str.ljust("Currency:", col3) + str.rjust("(" + c_symb + ") " +
-                                                           currency.upper(), col4a))
+            print(str.ljust("Version:", col[0]) + str.ljust(VERSION, col[1]) +
+                  str.ljust("Stock:", col[2]) + str.rjust(symbol.upper(), col[3]))
+            print(str.ljust("Multiple:", col[0]) + str.ljust(str(multiplier), col[1]) +
+                  str.ljust("Currency:", col[2]) + str.rjust("(" + c_symb + ") " +
+                                                             currency.upper(), col[3]))
 
             if args.tv:
-                print(str.ljust("Threshold at open value", col1 + col2) +
-                      str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+                print(str.ljust("Threshold at open value", col[0] + col[1]) +
+                      str.ljust("Interval:", col[2]) + str.rjust(str(refresh), col[3]))
             elif threshold == 0:
-                print(str.ljust("Threshold not configured", col1 + col2) +
-                      str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+                print(str.ljust("Threshold not configured", col[0] + col[1]) +
+                      str.ljust("Interval:", col[2]) + str.rjust(str(refresh), col[3]))
             else:
-                print(str.ljust("Threshold:", col1) + str.ljust(c_symb + str(threshold), col2) +
-                      str.ljust("Interval:", col3) + str.rjust(str(refresh), col4a))
+                print(str.ljust("Threshold:", col[0]) + str.ljust(c_symb + str(threshold), col[1]) +
+                      str.ljust("Interval:", col[2]) + str.rjust(str(refresh), col[3]))
             print()
             print("\33[44m" + delimiter + "\33[m")
             print()
@@ -429,81 +429,89 @@ def main():
     # Tick-tock format of start time line - just to show quickly that the script is iterating
 
         if tick_tock:
-            print("\33[44m" + str.ljust("Start:", col1) + "\33[0m" + str.ljust(start_time, col2) +
-                  str.ljust(start_time_est + " EST", col3) + str.rjust(start_date, col4a + col5))
+            print("\33[44m" + str.ljust("Start:", col[0]) + "\33[0m" + str.ljust(start_time, col[1])
+                  + str.ljust(start_time_est + " EST", col[2]) + str.rjust(start_date, col[3] +
+                                                                           col[4]))
             tick_tock = False
         else:
-            print(str.ljust("Start:", col1) + str.ljust(start_time, col2) +
-                  str.ljust(start_time_est + " EST", col3) + str.rjust(start_date, col4a + col5))
+            print(str.ljust("Start:", col[0]) + str.ljust(start_time, col[1]) +
+                  str.ljust(start_time_est + " EST", col[2]) + str.rjust(start_date, col[3] +
+                                                                         col[4]))
             tick_tock = True
 
     # Print basic live data
 
-        print(str.ljust("Time:", col1) + str.ljust(now, col2) + str.ljust(est_time + " EST", col3))
+        print(str.ljust("Time:", col[0]) + str.ljust(now, col[1]) + str.ljust(est_time + " EST",
+                                                                              col[2]))
         print()
 
         if not args.b and best_price > last_best_price:
-            print('\33[7m' + str.ljust(symbol.upper() + ":", col1) +
-                  str.ljust("$" + str(stock_price), col2) +
-                  str.ljust("H: " + str(best_price), col3) + str.rjust(price_delta, col4a) +
-                  str.rjust("@ " + peak_stk_time, col5) + '\33[0m' + bell)
+            print('\33[7m' + str.ljust(symbol.upper() + ":", col[0]) +
+                  str.ljust("$" + str(stock_price), col[1]) +
+                  str.ljust("H: " + str(best_price), col[2]) + str.rjust(price_delta, col[3]) +
+                  str.rjust("@ " + peak_stk_time, col[4]) + '\33[0m' + bell)
             last_best_price = best_price
         else:
-            print(str.ljust(symbol.upper() + ":", col1) + str.ljust("$" + str(stock_price), col2) +
-                  str.ljust("H: " + str(best_price), col3) + str.rjust(price_delta, col4a) +
-                  str.rjust("@ " + peak_stk_time, col5))
+            print(str.ljust(symbol.upper() + ":", col[0]) + str.ljust("$" + str(stock_price),
+                                                                      col[1]) +
+                  str.ljust("H: " + str(best_price), col[2]) + str.rjust(price_delta, col[3]) +
+                  str.rjust("@ " + peak_stk_time, col[4]))
         if currency != "usd":
-            print(str.ljust(currency.upper() + ":", col1) + str.ljust("x" + str(curr_val), col2) +
-                  str.ljust("L: " + str(low_fx), col3) + str.rjust(fx_delta, col4a) +
-                  str.rjust("@ " + low_fx_time, col5))
+            print(str.ljust(currency.upper() + ":", col[0]) + str.ljust("x" + str(curr_val),
+                                                                        col[1]) +
+                  str.ljust("L: " + str(low_fx), col[2]) + str.rjust(fx_delta, col[3]) +
+                  str.rjust("@ " + low_fx_time, col[4]))
         if currency != "usd" and args.b:
-            print(str.ljust("PRICE:", col1) + str.ljust(c_symb + str(curr_equiv), col2))
+            print(str.ljust("PRICE:", col[0]) + str.ljust(c_symb + str(curr_equiv), col[1]))
 
     # Format value line - colour code & shell beep alerts depending on case
 
         if args.b:
             if first_run:
-                print(str.ljust("VALUE:", col1) + str.ljust(c_symb + str(value), col2))
+                print(str.ljust("VALUE:", col[0]) + str.ljust(c_symb + str(value), col[1]))
             else:
                 if threshold != 0:
                     if multiplier * curr_equiv > threshold:
-                        print('\33[42m' + str.ljust("VALUE:", col1) +
-                              str.ljust(c_symb + str(value), col2) + str.rjust(val_delta, col4b) +
+                        print('\33[42m' + str.ljust("VALUE:", col[0]) +
+                              str.ljust(c_symb + str(value), col[1]) + str.rjust(val_delta, col[2] +
+                                                                                 col[3]) +
                               '\33[0m' + multi_bell)
                     elif value > best_value:
-                        print('\33[7m' + str.ljust("VALUE:", col1) +
-                              str.ljust(c_symb + str(value), col2) + str.rjust(val_delta, col4b) +
+                        print('\33[7m' + str.ljust("VALUE:", col[0]) +
+                              str.ljust(c_symb + str(value), col[1]) + str.rjust(val_delta, col[2] +
+                                                                                 col[3]) +
                               '\33[0m')
                     else:
-                        print(str.ljust("VALUE:", col1) + str.ljust(c_symb + str(value), col2) +
-                              str.rjust(val_delta, col4b))
+                        print(str.ljust("VALUE:", col[0]) + str.ljust(c_symb + str(value), col[1]) +
+                              str.rjust(val_delta, col[2] + col[3]))
                 else:
                     if value > best_value:
-                        print('\33[7m' + str.ljust("VALUE:", col1) +
-                              str.ljust(c_symb + str(value), col2) + str.rjust(val_delta, col4b) +
+                        print('\33[7m' + str.ljust("VALUE:", col[0]) +
+                              str.ljust(c_symb + str(value), col[1]) + str.rjust(val_delta, col[2] +
+                                                                                 col[3]) +
                               '\33[0m')
                     else:
-                        print(str.ljust("VALUE:", col1) + str.ljust(c_symb + str(value), col2) +
-                              str.rjust(val_delta, col4b))
+                        print(str.ljust("VALUE:", col[0]) + str.ljust(c_symb + str(value), col[1]) +
+                              str.rjust(val_delta, col[2] + col[3]))
 
     # Format best-since-start line - the highest price * value in local currency during run time.
     # Alert if best increases
 
             if first_run:
                 best_value = value
-                print(str.ljust("BEST:", col1) + str.ljust(c_symb + str(best_value), col2) +
-                      str.rjust("@ " + peak_val_time, col4b + col5))
+                print(str.ljust("BEST:", col[0]) + str.ljust(c_symb + str(best_value), col[1]) +
+                      str.rjust("@ " + peak_val_time, col[2] + col[3] + col[4]))
             elif value > best_value:
                 best_value = value
                 peak_val_time = now
-                print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(c_symb + str(value), col2) +
-                      str.rjust("@ " + peak_val_time, col4b + col5) + '\33[0m' + bell)
+                print('\33[7m' + str.ljust("BEST:", col[0]) + str.ljust(c_symb + str(value), col[1])
+                      + str.rjust("@ " + peak_val_time, col[2] + col[3] + col[4]) + '\33[0m' + bell)
             elif value == best_value:
-                print('\33[7m' + str.ljust("BEST:", col1) + str.ljust(c_symb + str(value), col2) +
-                      str.rjust("@ " + peak_val_time, col4b + col5) + '\33[0m')
+                print('\33[7m' + str.ljust("BEST:", col[0]) + str.ljust(c_symb + str(value), col[1])
+                      + str.rjust("@ " + peak_val_time, col[2] + col[3] + col[4]) + '\33[0m')
             else:
-                print(str.ljust("BEST:", col1) + str.ljust(c_symb + str(best_value), col2) +
-                      str.rjust("@ " + peak_val_time, col4b + col5))
+                print(str.ljust("BEST:", col[0]) + str.ljust(c_symb + str(best_value), col[1]) +
+                      str.rjust("@ " + peak_val_time, col[2] + col[3] + col[4]))
 
     # For reference: CSV_HDR = "Status,StartTime,StartTimeEST,Date,Symbol,SymbolPrice,SymbolHigh,
     # SymbolHighTime,Currency,CurrencyValue,CurrencyLow,CurrencyLowTime,Value,BestValue,
@@ -519,9 +527,10 @@ def main():
     # Generate countdown timer
 
         print()
-        print_countdown(bell, refresh, max_width)
+        print_countdown(bell, refresh, sum(col))
         print(delimiter)
         print()
+        first_run = False
 
         # Check hotkeys
 
@@ -549,7 +558,7 @@ def main():
             elif key in ["U", "u"]:  # Up threshold
                 threshold = threshold + thresh_change
                 print("\33[44m" + str.center("--- Increase threshold to " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
+                                             str(round(threshold, 2)) + " ---", sum(col)) +
                       "\33[0m")
                 print()
             elif key in ["D", "d"]:  # Down threshold
@@ -558,7 +567,7 @@ def main():
                 else:
                     threshold = threshold - thresh_change
                 print("\33[44m" + str.center("--- Reduce threshold to " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
+                                             str(round(threshold, 2)) + " ---", sum(col)) +
                       "\33[0m")
                 print()
             elif key in ["F", "f"]:  # Faster iteration
@@ -570,24 +579,24 @@ def main():
                 refresh = refresh + refresh_inc
             elif key in ["T", "t"]:  # Print current threshold
                 print("\33[44m" + str.center("--- Current threshold is " + c_symb +
-                                             str(round(threshold, 2)) + " ---", max_width) +
+                                             str(round(threshold, 2)) + " ---", sum(col)) +
                       "\33[0m")
                 print()
             elif key in ["B", "b"]:  # Toggle bell
                 if bell != DEF_BELL:
                     bell = DEF_BELL
                     multi_bell = DEF_MULTI_BELL
-                    print("\33[44m" + str.center("--- Alerts enabled ---", max_width) + "\33[0m")
+                    print("\33[44m" + str.center("--- Alerts enabled ---", sum(col)) + "\33[0m")
                     print()
                 else:
                     bell = ""
                     multi_bell = ""
-                    print("\33[44m" + str.center("--- Alerts disabled ---", max_width) + "\33[0m")
+                    print("\33[44m" + str.center("--- Alerts disabled ---", sum(col)) + "\33[0m")
                     print()
             else:
                 pass
 
-        first_run = False
+
 
     # Normal termination activities
 
