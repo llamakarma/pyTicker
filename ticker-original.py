@@ -3,7 +3,7 @@
 # Requires Python 3.6+
 # Package / help information
 
-version = "20200331-08"
+version = "20200331-08 Deprecated"
 helpnotes= """Hot-keys during use:
 
 Q/q - quit
