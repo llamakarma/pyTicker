@@ -27,7 +27,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200402-03"
+VERSION = "20200420-01"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
@@ -79,6 +79,7 @@ New features in recent memory:
   (also enables bell alerts on stock price instead of value)
 - Added bell toggle notification and bell status to countdown
 - Added auto-threshold based on opening value
+- Added quiet mode startup
 
 
 To do list:
@@ -93,7 +94,7 @@ To do list:
 DEF_CURRENCY = "usd"
 DEF_SYMBOL = "^gspc"
 DEF_MULTI = 1
-DEF_THRESH = 0
+DEF_THRESH = 0.0
 DEF_REFRESH = 20
 DEF_THRESH_FACTOR = 5
 DEF_REFRESH_INC = 5
@@ -215,6 +216,7 @@ def parse_cmdline():
     parser.add_argument("-o", type=str, help="CSV output file (default disabled)")
     parser.add_argument("-b", action='store_false', default=True, help="brief output - disable "
                         "Price, Value, Best")
+    parser.add_argument("-q", action='store_true', default=False, help="quiet mode - disable bell on startup")
     return parser.parse_args()
 
 
@@ -279,6 +281,12 @@ def main():
         rnd_val = DEF_RND_VAL
     else:
         rnd_val = args.d
+    if args.q:
+        bell = ""
+        multi_bell = ""
+    else:
+        bell = DEF_BELL
+        multi_bell = DEF_MULTI_BELL
 
 # Precedence in case user requests both -t and -tv arguments
 
@@ -292,8 +300,6 @@ def main():
     best_price = 0
     last_best_price = 0
     low_fx = 0
-    bell = DEF_BELL
-    multi_bell = DEF_MULTI_BELL
 
     # Flags for conditional formatting
 
@@ -567,7 +573,7 @@ def main():
                 print()
             elif key in ["D", "d"]:  # Down threshold
                 if threshold - thresh_change <= 0:
-                    threshold = 0
+                    threshold = 0.0
                 else:
                     threshold = threshold - thresh_change
                 print("\33[44m" + str.center("--- Reduce threshold to " + c_symb +
