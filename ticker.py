@@ -22,6 +22,7 @@ from datetime import datetime
 
 import requests
 import requests_html
+import requests_cache
 
 from yahoo_fin import stock_info as si
 from pytz import timezone
@@ -222,6 +223,8 @@ def parse_cmdline():
 
 def main():
     """ Main """
+    requests_cache.install_cache('ticker_cache')
+
     # Get command line parameters
 
     args = parse_cmdline()
