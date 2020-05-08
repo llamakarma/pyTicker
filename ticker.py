@@ -28,7 +28,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200420-01"
+VERSION = "20200508-01"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
@@ -81,6 +81,7 @@ New features in recent memory:
 - Added bell toggle notification and bell status to countdown
 - Added auto-threshold based on opening value
 - Added quiet mode startup
+- Added Requests-Cache
 
 
 To do list:
