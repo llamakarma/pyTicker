@@ -28,7 +28,7 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200508-01"
+VERSION = "20200513-01"
 HELP_NOTES = """Hot-keys during use:
 
 Q/q - quit
@@ -224,7 +224,6 @@ def parse_cmdline():
 
 def main():
     """ Main """
-    requests_cache.install_cache('ticker_cache')
 
     # Get command line parameters
 
@@ -326,6 +325,11 @@ def main():
     # Init key listener
 
     keystroke = KBHit()
+
+    # Setup requests_cache to limit DNS queries. Unique cache name required to prevent DB collision
+    # between multiple instances. Could use random, probably not required.
+
+    requests_cache.install_cache('ticker_cache_' + start_time)
 
     # Go!
 
