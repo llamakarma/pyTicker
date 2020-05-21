@@ -28,9 +28,10 @@ from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200513-01"
+VERSION = "20200521-01"
 HELP_NOTES = """Hot-keys during use:
 
+H/h - hotkey help
 Q/q - quit
 R/r - reset baselines
 U/u - up = increase threshold by -p %
@@ -82,6 +83,7 @@ New features in recent memory:
 - Added auto-threshold based on opening value
 - Added quiet mode startup
 - Added Requests-Cache
+- Added Hotkey Help
 
 
 To do list:
@@ -89,6 +91,15 @@ To do list:
 - Refactor
 
 \n\n
+"""
+
+HOTKEY_HELP = """H/h - hotkey help                           
+Q/q - quit                  U/u - up = increase threshold by -p % 
+T/t - print threshold       D/d - down = decrease threshold by -p %
+B/b - toggle alert bell     F/f - faster = decrease refresh interval
+R/r - reset baselines       S/s - slower = increase refresh interval
+
+Note: Only one keypress per iteration is actioned.
 """
 
 # Cmdline parameter defaults
@@ -611,6 +622,9 @@ def main():
                     multi_bell = ""
                     print("\33[44m" + str.center("--- Alerts disabled ---", sum(col)) + "\33[0m")
                     print()
+            elif key in ["H", "h"]:  # Print hotkey help text
+                print(HOTKEY_HELP)
+                print(delimiter)
             else:
                 pass
 
