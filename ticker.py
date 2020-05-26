@@ -22,13 +22,13 @@ from datetime import datetime
 
 import requests
 import requests_html
-import requests_cache
+#import requests_cache
 
 from yahoo_fin import stock_info as si
 from pytz import timezone
 
 
-VERSION = "20200521-01"
+VERSION = "20200526-01"
 HELP_NOTES = """Hot-keys during use:
 
 H/h - hotkey help
@@ -82,7 +82,7 @@ New features in recent memory:
 - Added bell toggle notification and bell status to countdown
 - Added auto-threshold based on opening value
 - Added quiet mode startup
-- Added Requests-Cache
+- Removed Requests-Cache 
 - Added Hotkey Help
 
 
@@ -339,8 +339,9 @@ def main():
 
     # Setup requests_cache to limit DNS queries. Unique cache name required to prevent DB collision
     # between multiple instances. Could use random, probably not required.
+    # Removed until a better solution is found
 
-    requests_cache.install_cache('ticker_cache_' + start_time)
+#    requests_cache.install_cache('ticker_cache_' + start_time)
 
     # Go!
 
